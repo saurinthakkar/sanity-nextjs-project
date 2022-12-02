@@ -1,7 +1,7 @@
 import groq from "groq";
 import imageUrlBuilder from "@sanity/image-url";
 import { PortableText } from "@portabletext/react";
-import client from "../lib/page";
+import client from "../../client";
 
 function urlFor(source) {
   return imageUrlBuilder(client).image(source);

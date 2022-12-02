@@ -1,6 +1,6 @@
 import Link from "next/link";
 import groq from "groq";
-import client from "./page";
+import client from "../client";
 
 const Index = ({ posts }) => {
   console.log("POL", posts);
