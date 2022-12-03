@@ -2,6 +2,7 @@ import groq from "groq";
 import imageUrlBuilder from "@sanity/image-url";
 import { PortableText } from "@portabletext/react";
 import client from "../../client";
+import { useRouter } from "next/router";
 
 function urlFor(source) {
   return imageUrlBuilder(client).image(source);
@@ -25,39 +26,49 @@ const ptComponents = {
 };
 
 const Post = ({ post }) => {
-  const {
-    title = "Missing Title",
-    name = "Missing name",
-    categories,
-    authorImage,
-    body = [],
-  } = post;
-  console.log("post", title, name, categories, authorImage, body);
+  const router = useRouter();
+
+  //console.log("post", title, name, categories, authorImage, body);
   //console.log("CHD", router, router.query);
 
-  return (
-    <article>
-      <h1>{title}</h1>
-      <span>By {name}</span>
-      {categories && (
-        <ul>
-          Posted in
-          {categories.map((category) => (
-            <li key={category}>{category}</li>
-          ))}
-        </ul>
-      )}
-      {authorImage && (
-        <div>
-          <img
-            src={urlFor(authorImage).width(50).url()}
-            alt={`${name}'s picture`}
-          />
-        </div>
-      )}
-      <PortableText value={body} components={ptComponents} />
-    </article>
-  );
+  if (router.isFallback) {
+    return (
+      <div>
+        <h1>Loading.........</h1>
+      </div>
+    );
+  } else {
+    const {
+      title = "Missing Title",
+      name = "Missing name",
+      categories,
+      authorImage,
+      body = [],
+    } = post;
+    return (
+      <article>
+        <h1>{title}</h1>
+        <span>By {name}</span>
+        {categories && (
+          <ul>
+            Posted in
+            {categories.map((category) => (
+              <li key={category}>{category}</li>
+            ))}
+          </ul>
+        )}
+        {authorImage && (
+          <div>
+            <img
+              src={urlFor(authorImage).width(50).url()}
+              alt={`${name}'s picture`}
+            />
+          </div>
+        )}
+        <PortableText value={body} components={ptComponents} />
+      </article>
+    );
+  }
 };
 
 const query = groq`*[_type == "post" && slug.current == $slug][0]{
