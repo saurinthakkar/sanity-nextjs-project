@@ -1,9 +1,9 @@
 import Link from "next/link";
 import groq from "groq";
-import client from "../client";
+import { getClient } from "../lib/sanity.server";
 
 const Index = ({ posts }) => {
-  console.log("POL", posts);
+  //console.log("YYYYYYYYYYYYYYYYYYYYY", sanityClient);
   return (
     <div>
       <h1>Welcome to blog</h1>
@@ -23,10 +23,11 @@ const Index = ({ posts }) => {
   );
 };
 
-export async function getStaticProps() {
-  const posts = await client.fetch(groq`
-  *[_type == "post" && publishedAt < now()] | order(publishedAt desc)
-    `);
+export async function getStaticProps({ preview = false }) {
+  const query = groq`
+  *[_type == "post" && publishedAt < now()] | order(publishedAt desc)`;
+
+  const posts = await getClient().fetch(query);
 
   return {
     props: {

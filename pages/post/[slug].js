@@ -1,12 +1,27 @@
 import groq from "groq";
 import imageUrlBuilder from "@sanity/image-url";
 import { PortableText } from "@portabletext/react";
-import client from "../../client";
+import { getClient } from "../../lib/sanity.server";
 import { useRouter } from "next/router";
 
 function urlFor(source) {
-  return imageUrlBuilder(client).image(source);
+  return imageUrlBuilder(getClient()).image(source);
 }
+
+const filterDataToSingleItem = (data, preview) => {
+  console.log("KILLLLLL", data, data[0], data.length);
+  if (!Array.isArray(data)) {
+    return data;
+  }
+  if (data.length === 1) {
+    return data[0];
+  }
+  if (preview) {
+    return data.find((item) => item._id.startsWith(`drafts`)) || data[0];
+  }
+
+  return data;
+};
 
 const ptComponents = {
   types: {
@@ -25,53 +40,45 @@ const ptComponents = {
   },
 };
 
-const Post = ({ post }) => {
+const Post = (post) => {
   const router = useRouter();
 
   //console.log("post", title, name, categories, authorImage, body);
   //console.log("CHD", router, router.query);
-
-  if (router.isFallback) {
-    return (
-      <div>
-        <h1>Loading.........</h1>
-      </div>
-    );
-  } else {
-    const {
-      title = "Missing Title",
-      name = "Missing name",
-      categories,
-      authorImage,
-      body = [],
-    } = post;
-    return (
-      <article>
-        <h1>{title}</h1>
-        <span>By {name}</span>
-        {categories && (
-          <ul>
-            Posted in
-            {categories.map((category) => (
-              <li key={category}>{category}</li>
-            ))}
-          </ul>
-        )}
-        {authorImage && (
-          <div>
-            <img
-              src={urlFor(authorImage).width(50).url()}
-              alt={`${name}'s picture`}
-            />
-          </div>
-        )}
-        <PortableText value={body} components={ptComponents} />
-      </article>
-    );
-  }
+  console.log("MKIL", post);
+  const {
+    title = "Missing Title",
+    name = "Missing name",
+    categories,
+    authorImage,
+    body = [],
+  } = post.data.page;
+  return (
+    <article>
+      <h1>{title}</h1>
+      <span>By {name}</span>
+      {categories && (
+        <ul>
+          Posted in
+          {categories.map((category) => (
+            <li key={category}>{category}</li>
+          ))}
+        </ul>
+      )}
+      {authorImage && (
+        <div>
+          <img
+            src={urlFor(authorImage).width(50).url()}
+            alt={`${name}'s picture`}
+          />
+        </div>
+      )}
+      <PortableText value={body} components={ptComponents} />
+    </article>
+  );
 };
 
-const query = groq`*[_type == "post" && slug.current == $slug][0]{
+const query = groq`*[_type == "post" && slug.current == $slug]{
   title,
   "name": author->name,
   "categories": categories[]->title,
@@ -80,11 +87,14 @@ const query = groq`*[_type == "post" && slug.current == $slug][0]{
 }`;
 
 export async function getStaticPaths() {
-  const paths = await client.fetch(
+  const paths = await getClient().fetch(
     groq`*[_type == "post" && defined(slug.current)][].slug.current`
   );
+  // let newParams = { params: "" };
+  // newParams = paths;
 
-  console.log("LOP", paths);
+  // console.log("LOP", newParams.params);
+  //console.log("JIK", paths);
 
   return {
     paths: paths.map((slug) => ({ params: { slug } })),
@@ -92,13 +102,18 @@ export async function getStaticPaths() {
   };
 }
 
-export async function getStaticProps(context) {
-  const { slug = "" } = context.params;
-  const post = await client.fetch(query, { slug });
-  console.log("LOP", post);
+export async function getStaticProps({ params, preview = false }) {
+  const { slug = "" } = params;
+  const post = await getClient(preview).fetch(query, { slug });
+  //if (!post) return { notFound: true };
+
+  console.log("LOLLLLLLLLLLLLLLLP", post, preview);
+  const page = filterDataToSingleItem(post, preview);
+  //console.log("LOP", post);
   return {
     props: {
-      post,
+      preview,
+      data: { page, query, slug },
     },
   };
 }
