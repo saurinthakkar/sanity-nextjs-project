@@ -3,13 +3,14 @@ import imageUrlBuilder from "@sanity/image-url";
 import { PortableText } from "@portabletext/react";
 import { getClient } from "../../lib/sanity.server";
 import { useRouter } from "next/router";
-
+import Link from "next/link";
+import preview from "../api/preview";
 function urlFor(source) {
   return imageUrlBuilder(getClient()).image(source);
 }
 
 const filterDataToSingleItem = (data, preview) => {
-  console.log("KILLLLLL", data, data[0], data.length);
+  console.log("KILLLLLL", data, data.length);
   if (!Array.isArray(data)) {
     return data;
   }
@@ -20,7 +21,7 @@ const filterDataToSingleItem = (data, preview) => {
     return data.find((item) => item._id.startsWith(`drafts`)) || data[0];
   }
 
-  return data;
+  return data[0];
 };
 
 const ptComponents = {
@@ -40,7 +41,7 @@ const ptComponents = {
   },
 };
 
-const Post = (post) => {
+const Post = ({ preview, post }) => {
   const router = useRouter();
 
   //console.log("post", title, name, categories, authorImage, body);
@@ -52,7 +53,7 @@ const Post = (post) => {
     categories,
     authorImage,
     body = [],
-  } = post.data.page;
+  } = post;
   return (
     <article>
       <h1>{title}</h1>
@@ -74,17 +75,28 @@ const Post = (post) => {
         </div>
       )}
       <PortableText value={body} components={ptComponents} />
+      {preview && <Link href="/api/exit-preview">Preview Mode activated</Link>}
     </article>
   );
 };
 
-const query = groq`*[_type == "post" && slug.current == $slug]{
+const query = groq`*[_type == "post" && slug.current == $slug][0]{
   title,
   "name": author->name,
   "categories": categories[]->title,
   "authorImage": author->image,
-  body
-}`;
+   body
+
+}
+`;
+
+// *[_type == "post" && slug.current == $slug]{
+//   title,
+//   "name": author->name,
+//   "categories": categories[]->title,
+//   "authorImage": author->image,
+//   body
+// }
 
 export async function getStaticPaths() {
   const paths = await getClient().fetch(
@@ -103,17 +115,18 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params, preview = false }) {
+  console.log(("SQW", params));
   const { slug = "" } = params;
   const post = await getClient(preview).fetch(query, { slug });
   //if (!post) return { notFound: true };
 
   console.log("LOLLLLLLLLLLLLLLLP", post, preview);
-  const page = filterDataToSingleItem(post, preview);
+  //const page = filterDataToSingleItem(post, preview);
   //console.log("LOP", post);
   return {
     props: {
       preview,
-      data: { page, query, slug },
+      post,
     },
   };
 }
